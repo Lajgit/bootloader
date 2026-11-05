@@ -98,8 +98,8 @@ int main(void)
   MX_SPI1_Init();
   MX_FATFS_Init();
   MX_USART1_UART_Init();
-  /* 武松使用微动板通道灯提示升级成功，其他板型保留RGB定时器。 */
-  if (Boot_BoardGetId() == BOOT_BOARD_WUSONG)
+  /* 武松和一统天下通过USART2控制各自球盘提示，其他板型保留RGB定时器。 */
+  if (Boot_BoardGetId() == BOOT_BOARD_WUSONG || Boot_BoardGetId() == BOOT_BOARD_YITONG)
     MX_USART2_UART_Init();
   else
     MX_TIM3_Init();

@@ -57,7 +57,7 @@ void MX_USART1_UART_Init(void)
 
 }
 
-/* 武松专用USART2：PD5/PD6连接微动板，阻塞发送提示帧，不启用接收中断。 */
+/* 武松/一统天下USART2：PD5/PD6连接各自球盘，阻塞发送提示帧，不启用接收中断。 */
 void MX_USART2_UART_Init(void)
 {
   huart2.Instance = USART2;

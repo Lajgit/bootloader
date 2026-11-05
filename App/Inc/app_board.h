@@ -17,7 +17,8 @@ typedef enum
     BOOT_BOARD_DANJIE = 1U,
     BOOT_BOARD_PANTAO = 2U,
     BOOT_BOARD_NIUDAN = 3U,
-    BOOT_BOARD_WUSONG = 4U // 新武松主控，选择独立的SD升级文件和板载指示灯
+    BOOT_BOARD_WUSONG = 4U, // 新武松主控，成功提示使用微动板通道灯
+    BOOT_BOARD_YITONG = 5U // 一统天下主控，成功提示使用球盘5颗RGB
 } BootBoardId_t;
 
 BootBoardId_t Boot_BoardGetId(void);

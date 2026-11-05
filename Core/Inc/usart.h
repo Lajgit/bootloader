@@ -33,7 +33,7 @@ extern "C" {
 /* USER CODE END Includes */
 
 extern UART_HandleTypeDef huart1;
-extern UART_HandleTypeDef huart2; // 武松升级成功提示连接微动板
+extern UART_HandleTypeDef huart2; // 武松/一统天下升级成功提示连接各自球盘
 
 /* USER CODE BEGIN Private defines */
 

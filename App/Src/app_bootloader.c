@@ -36,7 +36,7 @@ static uint8_t TxFrame[2U + 6U + 10U + 4U];
 BootBoardId_t Boot_BoardGetId(void)
 {
     /* 中文注释：只修改下一行后重新编译，不使用OTP。
-     * 弹界：BOOT_BOARD_DANJIE；蟠桃：BOOT_BOARD_PANTAO；扭蛋：BOOT_BOARD_NIUDAN；武松：BOOT_BOARD_WUSONG。
+     * 弹界：BOOT_BOARD_DANJIE；蟠桃：BOOT_BOARD_PANTAO；扭蛋：BOOT_BOARD_NIUDAN；武松：BOOT_BOARD_WUSONG；一统天下：BOOT_BOARD_YITONG。
      * 编译后自动在MDK-ARM/firmware生成对应板型的HEX和BIN，保留其他板型文件。
      */
     BootBoardId_t board_id = BOOT_BOARD_WUSONG;
@@ -47,6 +47,8 @@ const char *Boot_BoardGetFirmwareFileName(void)
 {
     switch (Boot_BoardGetId())
     {
+    case BOOT_BOARD_YITONG:
+        return FileName_Yitong;
     case BOOT_BOARD_WUSONG:
         return FileName_Wusong;
     case BOOT_BOARD_PANTAO:
@@ -147,12 +149,12 @@ static HAL_StatusTypeDef Flash_WriteUnlocked(uint32_t address, const uint8_t *da
     return HAL_OK;
 }
 
-/* 复用微动板14字节协议：04/07设置场景，04/01以Data3/4控制12路灯。 */
-static void Boot_BallSend(uint8_t command, uint16_t data)
+/* 复用球盘14字节协议，Data3/4为数据，补充位携带RGB的亮灭模式。 */
+static void Boot_BallSend(uint8_t command, uint16_t data, uint8_t expand)
 {
     static uint8_t id = 0U;
     uint8_t frame[14] = {0xAAU, 0U, 0U, 0x04U, command, 0U, 0U,
-                         (uint8_t)(data >> 8U), (uint8_t)data, 0U, 0U, 0U, 0U, 0x55U};
+                         (uint8_t)(data >> 8U), (uint8_t)data, 0U, expand, 0U, 0U, 0x55U};
     uint16_t crc = 0xFFFFU;
     frame[2] = ++id;
     /* CRC16覆盖前11字节，高字节先发；提示帧不要求回显应答。 */
@@ -167,10 +169,10 @@ static void Boot_BallSend(uint8_t command, uint16_t data)
     HAL_UART_Transmit(&huart2, frame, sizeof(frame), 100U);
 }
 
-/* 武松等待/失败仍用板载灯，成功改用微动板；其他板型保留原RGB提示。 */
+/* 武松/一统天下等待和失败用板载灯，成功由各自球盘提示；其他板型保持原RGB。 */
 void Boot_LightWaiting(void)
 {
-    if (Boot_BoardGetId() == BOOT_BOARD_WUSONG)
+    if (Boot_BoardGetId() == BOOT_BOARD_WUSONG || Boot_BoardGetId() == BOOT_BOARD_YITONG)
         HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
     else
         Light_SetAllColor(SKYBLUE, RGB_buffer);
@@ -181,17 +183,29 @@ void Boot_LightSuccess(void)
     {
         HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
         /* 先退出后台跟灯场景，避免微动扫描覆盖全亮；一秒后主动熄灭再交给APP。 */
-        Boot_BallSend(0x07U, 0x0001U);
-        Boot_BallSend(0x01U, 0x0FFFU);
+        Boot_BallSend(0x07U, 0x0001U, 0U);
+        Boot_BallSend(0x01U, 0x0FFFU, 0U);
         HAL_Delay(1000U);
-        Boot_BallSend(0x01U, 0x0000U);
+        Boot_BallSend(0x01U, 0x0000U, 0U);
+    }
+    else if (Boot_BoardGetId() == BOOT_BOARD_YITONG)
+    {
+        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+        /* 一统天下04/02：Data3=灯号1~5，Data4=红色0，补充位0常亮/1关闭。
+         * 按用户要求沿用当前亮度，不发送04/04亮度命令，也不发送武松通道灯命令。
+         */
+        for (uint8_t led = 1U; led <= 5U; led++)
+            Boot_BallSend(0x02U, ((uint16_t)led << 8U), 0U);
+        HAL_Delay(1000U);
+        for (uint8_t led = 1U; led <= 5U; led++)
+            Boot_BallSend(0x02U, ((uint16_t)led << 8U), 1U);
     }
     else
         Light_SetAllColor(GREEN, RGB_buffer);
 }
 void Boot_LightError(void)
 {
-    if (Boot_BoardGetId() == BOOT_BOARD_WUSONG)
+    if (Boot_BoardGetId() == BOOT_BOARD_WUSONG || Boot_BoardGetId() == BOOT_BOARD_YITONG)
         HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
     else
         Light_SetAllColor(RED, RGB_buffer);
@@ -631,7 +645,7 @@ static void OTA_HandleInstall(const OtaPacket_t *packet)
     Session.state = OTA_SESSION_INSTALLED;
     OTA_SendReply(packet->sequence, packet->command, OTA_RESULT_OK, metadata.version_code);
     Boot_LightSuccess();
-    if (Boot_BoardGetId() != BOOT_BOARD_WUSONG)
+    if (Boot_BoardGetId() != BOOT_BOARD_WUSONG && Boot_BoardGetId() != BOOT_BOARD_YITONG)
         HAL_Delay(1000U);
     NVIC_SystemReset();
 }
@@ -695,7 +709,7 @@ void JumpToApplication(void)
     entry = (AppEntry_t)(*(volatile uint32_t *)(APP_ADDR + 4U));
     __disable_irq();
     HAL_UART_DeInit(&huart1);
-    if (Boot_BoardGetId() == BOOT_BOARD_WUSONG)
+    if (Boot_BoardGetId() == BOOT_BOARD_WUSONG || Boot_BoardGetId() == BOOT_BOARD_YITONG)
         HAL_UART_DeInit(&huart2);
     HAL_DeInit();
     SysTick->CTRL = 0U;
@@ -738,9 +752,9 @@ static bool Boot_TrySdUpgrade(void)
     file_size = f_size(&SdFirmwareFile);
     if (file_size < 8U || file_size > APP_MAX_SIZE)
         goto finish;
-    if (Boot_BoardGetId() == BOOT_BOARD_WUSONG)
+    if (Boot_BoardGetId() == BOOT_BOARD_WUSONG || Boot_BoardGetId() == BOOT_BOARD_YITONG)
     {
-        /* 旧武松APP链接于0x08004000，新APP为0x0800C000；先检查再擦除。 */
+        /* 武松和一统天下APP均须链接于0x0800C000；先检查再擦除，拒绝旧地址镜像。 */
         if (read_file(&SdFirmwareFile, r_buffer, 8U, &bytes_read) != FR_OK || bytes_read != 8U ||
             !StackPointerIsValid(ReadU32LE(r_buffer)) ||
             !ResetHandlerIsValid(ReadU32LE(&r_buffer[4])) ||
@@ -779,8 +793,8 @@ finish:
     if (programmed)
     {
         Boot_LightSuccess();
-        /* 武松的一秒提示已在Boot_LightSuccess完成，其他板型保留原闪烁时序。 */
-        if (Boot_BoardGetId() != BOOT_BOARD_WUSONG)
+        /* 武松/一统天下的一秒提示已在Boot_LightSuccess完成，其他板型保留原闪烁。 */
+        if (Boot_BoardGetId() != BOOT_BOARD_WUSONG && Boot_BoardGetId() != BOOT_BOARD_YITONG)
         {
             for (uint8_t i = 0U; i < 6U; i++)
             {
@@ -812,7 +826,7 @@ void App_Bootloader(void)
         if (Boot_InstallCachedImage() == HAL_OK)
         {
             Boot_LightSuccess();
-            if (Boot_BoardGetId() != BOOT_BOARD_WUSONG)
+            if (Boot_BoardGetId() != BOOT_BOARD_WUSONG && Boot_BoardGetId() != BOOT_BOARD_YITONG)
                 HAL_Delay(1000U);
             JumpToApplication();
         }
