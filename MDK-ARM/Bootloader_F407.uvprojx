@@ -77,13 +77,13 @@
             <nStopB2X>0</nStopB2X>
           </BeforeMake>
           <AfterMake>
-            <RunUserProg1>0</RunUserProg1>
-            <RunUserProg2>1</RunUserProg2>
-            <UserProg1Name />
+            <RunUserProg1>1</RunUserProg1>
+            <RunUserProg2>0</RunUserProg2>
+            <UserProg1Name>powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\export_firmware.ps1" -AxfPath "#L" -FromElfPath "$KARM\ARMCC\bin\fromelf.exe"</UserProg1Name>
             <UserProg2Name />
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
             <UserProg2Dos16Mode>0</UserProg2Dos16Mode>
-            <nStopA1X>0</nStopA1X>
+            <nStopA1X>1</nStopA1X>
             <nStopA2X>0</nStopA2X>
           </AfterMake>
           <SelectedForBatchBuild>1</SelectedForBatchBuild>
@@ -581,6 +581,11 @@
               <FileName>app_bootloader.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\App\Src\app_bootloader.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_ws2812.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\Src\app_ws2812.c</FilePath>
             </File>
             <File>
               <FileName>app_sd.c</FileName>

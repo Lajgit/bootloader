@@ -37,7 +37,7 @@ BootBoardId_t Boot_BoardGetId(void)
 {
     /* 中文注释：只修改下一行后重新编译，不使用OTP。
      * 弹界：BOOT_BOARD_DANJIE；蟠桃：BOOT_BOARD_PANTAO；扭蛋：BOOT_BOARD_NIUDAN；武松：BOOT_BOARD_WUSONG。
-     * 每次编译后将HEX另存为对应板型名称，避免下次编译覆盖。
+     * 编译后自动在MDK-ARM/firmware生成对应板型的HEX和BIN，保留其他板型文件。
      */
     BootBoardId_t board_id = BOOT_BOARD_WUSONG;
     return board_id;

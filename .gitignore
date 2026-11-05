@@ -21,3 +21,6 @@
 
 # 根层空RTE组件头由Keil生成；保留各目标目录内的RTE配置。
 /MDK-ARM/RTE/RTE_Components.h
+
+# 按board_id导出的Bootloader固件由编译后脚本生成。
+/MDK-ARM/firmware/
