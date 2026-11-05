@@ -1,0 +1,23 @@
+# Keil/EIDE编译输出；仅忽略实际生成目录，保留测试固件、源码和工程配置。
+/MDK-ARM/Bootloader_F407/
+/MDK-ARM/build/
+/MDK-ARM/bin/
+/MDK-ARM/obj/
+/MDK-ARM/out/
+/MDK-ARM/Objects/
+/MDK-ARM/Listings/
+
+# Keil用户窗口布局、启动列表、日志和验证时生成的临时工程。
+/MDK-ARM/*.uvguix
+/MDK-ARM/*.uvguix.*
+/MDK-ARM/startup_*.lst
+/MDK-ARM/*_verify.uvprojx
+/MDK-ARM/.vscode/*.log
+/MDK-ARM/.vscode/*.log.lock
+
+# EIDE运行日志及本机上下文不入库。
+/MDK-ARM/.eide/log/
+/MDK-ARM/.eide.usr.ctx.json
+
+# 根层空RTE组件头由Keil生成；保留各目标目录内的RTE配置。
+/MDK-ARM/RTE/RTE_Components.h
