@@ -149,10 +149,11 @@ static bool SD_RxDataBlock(BYTE *buff, UINT len)
 	/* invalid response */
 	if(token != 0xFE) return FALSE;
 
-	/* receive data */
-	do {
+	/* 按实际长度接收，避免扇区或CSD缓冲区多写一个字节。 */
+	while (len > 0U) {
 		SPI_RxBytePtr(buff++);
-	} while(len--);
+		len--;
+	}
 
 	/* discard CRC */
 	SPI_RxByte();
@@ -254,6 +255,11 @@ DSTATUS SD_disk_initialize(BYTE drv)
 	/* no disk */
 	if(Stat & STA_NODISK) return Stat;
 
+	/* 每次重新探卡均先降至84MHz/256=328.125kHz，成功后再恢复高速。 */
+	Stat |= STA_NOINIT;
+	(HSPI_SDCARD)->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
+	if (HAL_SPI_Init(HSPI_SDCARD) != HAL_OK) return Stat;
+
 	/* power on */
 	SD_PowerOn();
 
@@ -319,10 +325,12 @@ DSTATUS SD_disk_initialize(BYTE drv)
 			} while (Timer1);
 
 			/* SET_BLOCKLEN */
-			if (!Timer1 || SD_SendCmd(CMD16, 512) != 0) type = 0;
+			if (!Timer1) type = 0;
 		}
 	}
 
+	/* 所有字节寻址卡统一设为512字节，包括SDv2标准容量卡。 */
+	if (type && !(type & CT_BLOCK) && SD_SendCmd(CMD16, 512) != 0) type = 0;
 	CardType = type;
 
 	/* Idle */
@@ -332,6 +340,11 @@ DSTATUS SD_disk_initialize(BYTE drv)
 	/* Clear STA_NOINIT */
 	if (type)
 	{
+		(HSPI_SDCARD)->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
+		if (HAL_SPI_Init(HSPI_SDCARD) != HAL_OK) {
+			SD_PowerOff();
+			return Stat;
+		}
 		Stat &= ~STA_NOINIT;
 	}
 	else
@@ -360,7 +373,8 @@ DRESULT SD_disk_read(BYTE pdrv, BYTE* buff, DWORD sector, UINT count)
 	if (Stat & STA_NOINIT) return RES_NOTRDY;
 
 	/* convert to byte address */
-	if (!(CardType & CT_SD2)) sector *= 512;
+	/* 只有CT_BLOCK表示块寻址；SDv2标准容量卡仍使用字节地址。 */
+	if (!(CardType & CT_BLOCK)) sector *= 512;
 
 	SELECT();
 
@@ -405,7 +419,8 @@ DRESULT SD_disk_write(BYTE pdrv, const BYTE* buff, DWORD sector, UINT count)
 	if (Stat & STA_PROTECT) return RES_WRPRT;
 
 	/* convert to byte address */
-	if (!(CardType & CT_SD2)) sector *= 512;
+	/* 只有CT_BLOCK表示块寻址；SDv2标准容量卡仍使用字节地址。 */
+	if (!(CardType & CT_BLOCK)) sector *= 512;
 
 	SELECT();
 

@@ -730,7 +730,7 @@ void JumpToApplication(void)
     while (1) {}
 }
 
-static bool Boot_TrySdUpgrade(void)
+static bool Boot_TrySdUpgrade(bool *app_modified)
 {
     UINT bytes_read;
     uint32_t file_size;
@@ -739,6 +739,9 @@ static bool Boot_TrySdUpgrade(void)
     FLASH_EraseInitTypeDef erase = {0};
     HAL_StatusTypeDef program_status = HAL_ERROR;
     bool programmed = false;
+    uint8_t vectors[8];
+    /* 擦写开始后的失败不能回退启动旧向量指向的残缺APP。 */
+    *app_modified = false;
     if (mount_disk(&fs, "", 0) != FR_OK)
     {
         f_mount(NULL, "", 0);
@@ -768,6 +771,7 @@ static bool Boot_TrySdUpgrade(void)
     if (HAL_FLASH_Unlock() != HAL_OK)
         goto finish;
     Flash_ClearFlags();
+    *app_modified = true;
     if (HAL_FLASHEx_Erase(&erase, &sector_error) != HAL_OK)
     {
         HAL_FLASH_Lock();
@@ -776,17 +780,42 @@ static bool Boot_TrySdUpgrade(void)
     program_status = HAL_OK;
     while (offset < file_size)
     {
-        if (read_file(&SdFirmwareFile, r_buffer, sizeof(r_buffer), &bytes_read) != FR_OK ||
-            bytes_read == 0U ||
-            Flash_Program(APP_ADDR + offset, r_buffer, bytes_read) != HAL_OK)
+        uint32_t remaining = file_size - offset;
+        uint32_t block_offset = offset;
+        uint32_t block_size;
+        const uint8_t *block_data = r_buffer;
+        if (read_file(&SdFirmwareFile, r_buffer,
+                      remaining > sizeof(r_buffer) ? sizeof(r_buffer) : remaining,
+                      &bytes_read) != FR_OK || bytes_read == 0U || bytes_read > remaining ||
+            (offset == 0U && bytes_read < sizeof(vectors)))
+        {
+            program_status = HAL_ERROR;
+            break;
+        }
+        block_size = bytes_read;
+        if (offset == 0U)
+        {
+            /* 向量最后写入；中途失败或重启时，擦除态向量不能被误判为有效APP。 */
+            memcpy(vectors, r_buffer, sizeof(vectors));
+            block_offset += sizeof(vectors);
+            block_data += sizeof(vectors);
+            block_size -= sizeof(vectors);
+        }
+        if (block_size > 0U &&
+            (Flash_Program(APP_ADDR + block_offset, (uint8_t *)block_data, block_size) != HAL_OK ||
+             !Boot_FlashCompare(APP_ADDR + block_offset, block_data, block_size)))
         {
             program_status = HAL_ERROR;
             break;
         }
         offset += bytes_read;
     }
+    if (program_status == HAL_OK && offset == file_size)
+    {
+        programmed = Flash_Program(APP_ADDR, vectors, sizeof(vectors)) == HAL_OK &&
+                     Boot_FlashCompare(APP_ADDR, vectors, sizeof(vectors)) && Boot_AppIsValid();
+    }
     HAL_FLASH_Lock();
-    programmed = program_status == HAL_OK && offset == file_size && Boot_AppIsValid();
 finish:
     close_file(&SdFirmwareFile);
     f_mount(NULL, "", 0);
@@ -832,7 +861,7 @@ void App_Bootloader(void)
         }
         Boot_LightError();
     }
-    if (!recovery_pending && Boot_TrySdUpgrade())
+    if (!recovery_pending && Boot_TrySdUpgrade(&recovery_pending))
         JumpToApplication();
     if (!recovery_pending && Boot_AppIsValid())
     {
