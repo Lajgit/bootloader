@@ -123,8 +123,8 @@ targets:
           version: 4
           afterBuildTasks:
             - name: 按板型导出HEX和BIN
-              command: 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${ProjectRoot}/export_firmware.ps1" -AxfPath "${ExecutableName}.axf" -FromElfPath "${ToolchainRoot}/bin/fromelf.exe"'
               abortAfterFailed: true
+              command: powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${ProjectRoot}/export_firmware.ps1" -AxfPath "${ExecutableName}.axf" -FromElfPath "${ToolchainRoot}/bin/fromelf.exe"
           asm-compiler: {}
           beforeBuildTasks: []
           c/cpp-compiler:
@@ -274,8 +274,8 @@ targets:
           version: 4
           afterBuildTasks:
             - name: 按板型导出HEX和BIN
-              command: 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${ProjectRoot}/export_firmware.ps1" -AxfPath "${ExecutableName}.axf" -FromElfPath "${ToolchainRoot}/bin/fromelf.exe"'
               abortAfterFailed: true
+              command: powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${ProjectRoot}/export_firmware.ps1" -AxfPath "${ExecutableName}.axf" -FromElfPath "${ToolchainRoot}/bin/fromelf.exe"
           asm-compiler: {}
           beforeBuildTasks: []
           c/cpp-compiler:
