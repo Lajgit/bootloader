@@ -46,7 +46,8 @@ void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 5;
+  /* 掉珠机与APP一致：84MHz / (6+1) / (14+1) = 800kHz。 */
+  htim3.Init.Prescaler = Boot_BoardGetId() == BOOT_BOARD_DIAOQIU ? 6U : 5U;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 14;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -188,7 +189,17 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* timHandle)
      * 弹界/扭蛋：PC9=CH4、PB4=CH1、PB5=CH2。
      * 蟠桃：PC7=CH2、PC9=CH4、PB4=CH1。
      */
-    if (Boot_BoardGetId() == BOOT_BOARD_PANTAO)
+    if (Boot_BoardGetId() == BOOT_BOARD_DIAOQIU)
+    {
+      /* 网表RGB1/2为PC6/PC7，PB4是12V负载控制，不能沿用旧灯效引脚。 */
+      GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
+      GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+      GPIO_InitStruct.Pull = GPIO_NOPULL;
+      GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+      GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
+      HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    }
+    else if (Boot_BoardGetId() == BOOT_BOARD_PANTAO)
     {
       GPIO_InitStruct.Pin = GPIO_PIN_7|GPIO_PIN_9;
       GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;

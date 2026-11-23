@@ -26,6 +26,7 @@ try {
         BOOT_BOARD_NIUDAN = 'Bootloader_Niudan'
         BOOT_BOARD_WUSONG = 'Bootloader_Wusong'
         BOOT_BOARD_YITONG = 'Bootloader_Yitong'
+        BOOT_BOARD_DIAOQIU = 'Bootloader_DIAOQIU'
     }
     $exportBoard = $exportSelection[0].Groups['board'].Value
     if (-not $exportNames.ContainsKey($exportBoard)) {

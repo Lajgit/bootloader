@@ -97,7 +97,9 @@ int main(void)
   MX_DMA_Init();
   MX_SPI1_Init();
   MX_FATFS_Init();
-  MX_USART1_UART_Init();
+  /* 中文注释：DIAOQIU仅使用SD卡，不初始化升级/球盘提示串口。 */
+  if (Boot_BoardGetId() != BOOT_BOARD_DIAOQIU)
+    MX_USART1_UART_Init();
   /* 武松和一统天下通过USART2控制各自球盘提示，其他板型保留RGB定时器。 */
   if (Boot_BoardGetId() == BOOT_BOARD_WUSONG || Boot_BoardGetId() == BOOT_BOARD_YITONG)
     MX_USART2_UART_Init();

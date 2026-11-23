@@ -18,7 +18,8 @@ typedef enum
     BOOT_BOARD_PANTAO = 2U,
     BOOT_BOARD_NIUDAN = 3U,
     BOOT_BOARD_WUSONG = 4U, // 新武松主控，成功提示使用微动板通道灯
-    BOOT_BOARD_YITONG = 5U // 一统天下主控，成功提示使用球盘5颗RGB
+    BOOT_BOARD_YITONG = 5U, // 一统天下主控，成功提示使用球盘5颗RGB
+    BOOT_BOARD_DIAOQIU = 6U // 掉珠机上球盘，仅SD升级，PC6/PC7本机RGB提示
 } BootBoardId_t;
 
 BootBoardId_t Boot_BoardGetId(void);
